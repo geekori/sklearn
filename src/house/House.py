@@ -86,6 +86,7 @@ train_set,test_set = split_train_test_by_id(housing_with_id,0.2,"id")
 用Scikit-Learn API产生训练集和测试集
 
 
+
 '''
 
 from sklearn.model_selection import train_test_split
@@ -136,3 +137,168 @@ compare_props = pd.DataFrame({
 }).sort_index()
 
 print(compare_props)
+
+# 通过可视化地理数据寻找模式
+
+
+housing = strat_train_set.copy()
+#housing.plot(kind='scatter', x = 'longitude',y='latitude', alpha=0.1)
+
+'''
+半径（s:表示每个地区的人口数量），颜色表示房价（c）【红色表示高房价】
+
+'''
+housing.plot(kind='scatter',x = 'longitude',y='latitude',alpha=0.4,
+             s=housing['population']/100,label='population',figsize=(10,7),
+             c='median_house_value',cmap=plt.get_cmap('jet'),colorbar=True)
+#plt.show()
+
+
+# 用两种方法检测属性之间的相关度
+
+'''
+1. 标准相关系数
+corr函数获取标准相关系统（皮尔逊相关系数）
+
+相关系数的取值范围：-1到1  越接近1，表示越强的正相关，  越接近-1，表示越强的负相关
+0：表示两个属性没有任何关系
+
+2. Pandas的scatter_matrix函数
+
+
+进行相关度分析的目的：为了选取和房价相关度很强的属性来预测房价
+
+'''
+
+corr_matrix = housing.corr()
+print('---------其他属性与median_house_value属性的相关度')
+# 人均收入与平均房价相关度非常大
+print(corr_matrix['median_house_value'].sort_values(ascending=False))
+# 人数和房屋数有非常强的正相关，而房屋平均年龄与房屋数有非常强的负相关
+print(corr_matrix['total_rooms'].sort_values(ascending=False))
+
+
+# 2. scatter_matrix函数
+
+from pandas.tools.plotting import scatter_matrix
+
+attributes = ['median_house_value','median_income','total_rooms','housing_median_age']
+
+# 清除可能有问题的数据
+# housing = housing[housing['median_house_value'] < 490000]
+
+scatter_matrix(housing[attributes],figsize=(12,8))
+#plt.show()
+
+# 实验不同属性的组合
+
+# 每户的房间数
+housing['rooms_per_household'] = housing['total_rooms'] / housing['households']
+
+# 每间房的卧室数
+housing['bedrooms_per_room'] = housing['total_bedrooms'] / housing['total_rooms']
+
+# 每户的人数
+housing['population_per_household'] = housing['population'] / housing['households']
+
+corr_matrix = housing.corr()
+
+print(corr_matrix['median_house_value'].sort_values(ascending=False))
+
+housing.plot(kind='scatter',x='rooms_per_household', y = 'median_house_value',alpha = 0.1)
+# 0,5：水平坐标   0,520000：纵向坐标
+plt.axis([0,5,0,520000])
+
+#plt.show()
+
+# 数据清理-填补缺失值
+
+from sklearn.impute import SimpleImputer
+
+# 平均数（mean）、中位数（median）、出现比较频繁的值（most_frequent）、常量（constant）
+
+imputer = SimpleImputer(strategy = 'median')
+# 将ocean_proximity列从housing数据集删除
+housing_num = housing.drop('ocean_proximity',axis=1)
+'''  
+# 适配数据集
+imputer.fit(housing_num)
+# 输出每一列的中位数
+print(imputer.statistics_)
+print(housing_num.median().values)
+
+X = imputer.transform(housing_num)   #  Numpy数组
+print(X)
+
+housing_tr = pd.DataFrame(X,columns=housing_num.columns)
+print(housing_tr)
+'''
+
+X = imputer.fit_transform(housing_num)
+print(X)
+housing_tr = pd.DataFrame(X,columns=housing_num.columns)
+print(housing_tr)
+
+'''
+处理文本和分类属性
+
+'''
+
+from sklearn.preprocessing import LabelEncoder
+
+encoder = LabelEncoder()
+housing_ocean_proximity = housing['ocean_proximity']
+print(housing_ocean_proximity)
+# 将文本按枚举类型转换为数值（0到4）
+housing_ocean_proximity_encoded = encoder.fit_transform(housing_ocean_proximity) # NumPy
+print(housing_ocean_proximity_encoded)
+# 获取所有的枚举值
+print(encoder.classes_)
+
+'''
+带来的问题：单纯根据枚举值转换，会让算法认为相邻的值相似度高，这和实际情况有些不同
+
+解决方案：
+
+二进制： 
+10000
+01000
+00100
+00010
+00001
+
+独热编码
+'''
+
+from sklearn.preprocessing import OneHotEncoder
+
+encoder = OneHotEncoder(categories = 'auto')
+housing_ocean_proximity_encoded1 = encoder.fit_transform(housing_ocean_proximity_encoded.reshape(-1,1))
+#print(housing_ocean_proximity_encoded.reshape(-1,1))
+# 稀疏矩阵（SciPy）
+print(housing_ocean_proximity_encoded1.toarray())
+
+
+# 通过label_binarize将前面的操作合二为一
+from sklearn.preprocessing import label_binarize
+
+housing_ocean_proximity_encoded2 = label_binarize(housing_ocean_proximity,['<1H OCEAN','INLAND','ISLAND','NEAR BAY','NEAR OCEAN'],sparse_output=True)
+
+print(housing_ocean_proximity_encoded2.toarray())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
