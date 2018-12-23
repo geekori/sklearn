@@ -286,12 +286,100 @@ housing_ocean_proximity_encoded2 = label_binarize(housing_ocean_proximity,['<1H 
 
 print(housing_ocean_proximity_encoded2.toarray())
 
+'''
+自定义转换器
+
+
+BaseEstimator
+TransformerMixin
+
+鸭子类型（duck typing）
+
+fit：返回转换器实例本身
+
+transform：一般返回NumPy数组
+
+'''
+from sklearn.base import BaseEstimator,TransformerMixin
+
+class CustomTransformer(BaseEstimator,TransformerMixin):
+    def __init__(self,add_bedrooms_per_room = True):
+        self.add_bedrooms_per_room = add_bedrooms_per_room
+
+    def fit(self,X,y=None):
+        return self
+    # NumPy数组
+    def transform(self,X,y=None):
+        rooms_per_household = X[:, 3] / X[:, 6]
+        population_per_household = X[:, 5] / X[:, 6]
+        if self.add_bedrooms_per_room:
+            bedrooms_per_room = X[:, 4] / X[:, 3]
+            return np.c_[X,rooms_per_household,population_per_household,bedrooms_per_room]
+        else:
+            return np.c_[X, rooms_per_household,population_per_household]
+
+transformer = CustomTransformer(add_bedrooms_per_room=False)
+#new_values = transformer.transform(housing.values)
+new_values = transformer.fit_transform(housing.values)
+print(new_values)
+
+'''
+数据转换管道（pipeline）
+
+Pipeline
 
 
 
+'''
+
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+num_pipeline = Pipeline([
+    ('imputer',SimpleImputer(strategy='median')),
+    ('custom',CustomTransformer()),
+    ('std_scaler',StandardScaler())
+])
+
+housing_num_tr = num_pipeline.fit_transform(housing_num)
+print('-------housing_num_tr----------')
+print(housing_num_tr)
+
+class DataFrameSelector(BaseEstimator, TransformerMixin):
+    def __init__(self,attribute_names):
+        self.attribute_names = attribute_names
+
+    def fit(self,X,y=None):
+        return self
+
+    def transform(self,X):
+        return X[self.attribute_names].values
+num_attribs = list(housing_num)
+print(num_attribs)
+num_pipeline = Pipeline([
+    ('selector', DataFrameSelector(num_attribs)),
+    ('imputer',SimpleImputer(strategy='mean')),
+    ('custom',CustomTransformer()),
+    ('std_scaler', StandardScaler())
+
+])
+
+cat_attribs = ['ocean_proximity']
+cat_pipeline = Pipeline([
+    ('selector',DataFrameSelector(cat_attribs)),
+    ('cat_encoder',OneHotEncoder(sparse=False))
+])
 
 
+from sklearn.pipeline import FeatureUnion
+# 并行
+full_pipeline = FeatureUnion(transformer_list = [
+    ('num_pipeline',num_pipeline),
+    ('cat_pipeline',cat_pipeline)
+])
 
+housing_prepared = full_pipeline.fit_transform(housing)
+print(housing_prepared)
 
 
 
