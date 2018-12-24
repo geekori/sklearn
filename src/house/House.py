@@ -382,6 +382,75 @@ housing_prepared = full_pipeline.fit_transform(housing)
 print(housing_prepared)
 
 
+'''
+
+选择和训练模型
+'''
+
+# 每户的房间数
+strat_train_set['rooms_per_household'] = strat_train_set['total_rooms'] / strat_train_set['households']
+
+# 每间房的卧室数
+strat_train_set['bedrooms_per_room'] = strat_train_set['total_bedrooms'] / strat_train_set['total_rooms']
+
+# 每户的人数
+strat_train_set['population_per_household'] = strat_train_set['population'] / strat_train_set['households']
+
+# 每户的房间数
+strat_test_set['rooms_per_household'] = strat_test_set['total_rooms'] / strat_test_set['households']
+
+# 每间房的卧室数
+strat_test_set['bedrooms_per_room'] = strat_test_set['total_bedrooms'] / strat_test_set['total_rooms']
+
+# 每户的人数
+strat_test_set['population_per_household'] = strat_test_set['population'] / strat_test_set['households']
+
+housing_train_prepared = full_pipeline.transform(strat_train_set)
+housing_test_prepared = full_pipeline.transform(strat_test_set)
+# 用于训练的特征标签
+housing_train_labels = strat_train_set['median_house_value'].copy()
+# 用于验证的特征标签
+housing_test_labels = strat_test_set['median_house_value'].copy()
+
+#####线性回归模型########
+
+from sklearn.linear_model import LinearRegression
+
+linearRegression = LinearRegression()
+# 准备训练数据
+linearRegression.fit(housing_train_prepared, housing_train_labels)
+
+predictResult = linearRegression.predict(housing_test_prepared)
+print('预测结果：',predictResult)
+print('真实结果：',list(housing_test_labels))
+
+
+train = np.c_[housing_train_prepared[:,:8],housing_train_prepared[:,9:]]
+test = np.c_[housing_test_prepared[:,:8],housing_test_prepared[:,9:]]
+
+linearRegression.fit(train,housing_train_labels)
+predictResult = linearRegression.predict(test)
+
+print('预测结果：',predictResult)
+print('真实结果：',list(housing_test_labels))
+
+#####决策树##########
+
+from sklearn.tree import DecisionTreeRegressor
+
+tree_reg = DecisionTreeRegressor(random_state=315)
+tree_reg.fit(housing_train_prepared, housing_train_labels)
+
+predictResult = tree_reg.predict(housing_test_prepared)
+print('预测结果：',predictResult)
+print('真实结果：',list(housing_test_labels))
+
+tree_reg.fit(train, housing_train_labels)
+
+predictResult = tree_reg.predict(test)
+print('预测结果：',predictResult)
+print('真实结果：',list(housing_test_labels))
+
 
 
 
