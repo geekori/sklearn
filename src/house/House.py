@@ -420,8 +420,8 @@ linearRegression = LinearRegression()
 # 准备训练数据
 linearRegression.fit(housing_train_prepared, housing_train_labels)
 
-predictResult = linearRegression.predict(housing_test_prepared)
-print('预测结果：',predictResult)
+line_predictResult = linearRegression.predict(housing_test_prepared)
+print('预测结果：',line_predictResult)
 print('真实结果：',list(housing_test_labels))
 
 
@@ -429,9 +429,9 @@ train = np.c_[housing_train_prepared[:,:8],housing_train_prepared[:,9:]]
 test = np.c_[housing_test_prepared[:,:8],housing_test_prepared[:,9:]]
 
 linearRegression.fit(train,housing_train_labels)
-predictResult = linearRegression.predict(test)
+line_predictResult = linearRegression.predict(test)
 
-print('预测结果：',predictResult)
+print('预测结果：',line_predictResult)
 print('真实结果：',list(housing_test_labels))
 
 #####决策树##########
@@ -441,21 +441,63 @@ from sklearn.tree import DecisionTreeRegressor
 tree_reg = DecisionTreeRegressor(random_state=315)
 tree_reg.fit(housing_train_prepared, housing_train_labels)
 
-predictResult = tree_reg.predict(housing_test_prepared)
-print('预测结果：',predictResult)
+tree_predictResult = tree_reg.predict(housing_test_prepared)
+print('预测结果：',tree_predictResult)
 print('真实结果：',list(housing_test_labels))
 
 tree_reg.fit(train, housing_train_labels)
 
-predictResult = tree_reg.predict(test)
-print('预测结果：',predictResult)
+tree_predictResult = tree_reg.predict(test)
+print('预测结果：',tree_predictResult)
 print('真实结果：',list(housing_test_labels))
 
+'''
+评估模型的性能
+
+'''
+
+from sklearn.metrics import  mean_squared_error
+from sklearn.metrics import mean_absolute_error
+
+line_mse = mean_squared_error(housing_test_labels,line_predictResult)
+line_rmse = np.sqrt(line_mse)
+print('line_rmse:', line_rmse)
+
+line_mae = mean_absolute_error(housing_test_labels,line_predictResult)
+print('line_mae:', line_mae)
 
 
+tree_mse = mean_squared_error(housing_test_labels,tree_predictResult)
+tree_rmse = np.sqrt(tree_mse)
+print('tree_rmse:',tree_rmse)
+
+tree_mae = mean_absolute_error(housing_test_labels,tree_predictResult)
+print('tree_mae:',tree_mae)
 
 
+'''
+使用交叉验证评估和选择模型
 
+'''
 
+from sklearn.model_selection import cross_val_score
 
+# 线性回归模型
+train = np.c_[housing_prepared[:,:8],housing_prepared[:,9:]]
 
+housing_labels = housing['median_house_value'].copy()
+scores = cross_val_score(linearRegression,train,housing_labels,scoring='neg_mean_squared_error',cv=10)
+print(scores)
+line_rmse_scores = np.sqrt(-scores)
+print(line_rmse_scores)
+
+def display_scores(scores):
+    print('scores:',scores)
+    print('mean:',scores.mean())
+    print('Standard deviation:', scores.std())
+
+display_scores(line_rmse_scores)
+# 决策树
+scores = cross_val_score(tree_reg,train,housing_labels,scoring='neg_mean_squared_error',cv=10)
+tree_rmse_scores = np.sqrt(-scores)
+display_scores(tree_rmse_scores)
